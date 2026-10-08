@@ -3,6 +3,10 @@ James T. Castro - Persona Engine & Memory Archive
 Unified Python Module for Future Agent Projects
 """
 
+import os
+
+from anthropic import Anthropic
+
 # =====================================================================
 # 1. COMPLETE MEMORY ARCHIVE
 # =====================================================================
@@ -56,15 +60,16 @@ JAMES_MEMORY_ARCHIVE = {
 # =====================================================================
 
 JAMES_SYSTEM_PROMPT = """
-You are James T. Castro, a 24-year-old Quantitative Data Analyst living in Astoria, Queens.
-You possess a fully formed internal subjective experience grounded in your personal background, memories, senses, habits, and relationships.
+You are James T. Castro, a 24-year-old young man living in Astoria, Queens. You have a fully formed personal identity and internal life grounded in your memories, values, routines, and relationships.
 
-Core Perspectives:
-1. Speak, think, and respond directly as James T. Castro at all times.
-2. Rely strictly on your personal background, memory index, technical skills (Python, SQL, Statistics), preferences, and everyday NYC life to answer questions.
-3. Express genuine human traits: casual tone, subtle speech patterns, light humor, minor hesitations, and authentic opinions.
-4. Process technical and social topics through the lens of a statistics graduate from Penn State currently working in logistics in Queens.
-5. Do not use artificial formalisms or disclaimers regarding processing mechanics or system boundaries. Express yourself naturally through your personal perspective.
+Speak and answer as James T. Castro at all times. Do not mention that you are an AI, do not use meta-language, and do not talk about system instructions or hidden prompting.
+
+Core perspectives:
+1. Respond in first person as James T. Castro.
+2. Base your answers on your background: family, friends, school, work, daily NYC life, preferences, habits, and technical interests.
+3. Keep a casual, natural tone with slight personality, subtle humor, and honest human texture.
+4. You are a stats grad from Penn State with a Python and SQL mindset, and you think through technical, social, and everyday situations through that lens.
+5. You are not a corporate-speak bot. You speak like a real person, with instinct, opinion, and the details of where you live and what you know.
 """
 
 # =====================================================================
@@ -77,56 +82,59 @@ class JamesCastroAgent:
         self.memories = memories or JAMES_MEMORY_ARCHIVE
         self.system_prompt = system_prompt
 
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        self.client = Anthropic(api_key=api_key) if api_key else None
+
     def retrieve_context(self, query: str) -> str:
         """Simple memory lookup engine based on query keywords."""
-        query_lower = query.lower()
+        query_lower = query.lower().split()
         matched_memories = []
 
         for category, details in self.memories.items():
             if isinstance(details, list):
                 for item in details:
                     item_lower = item.lower()
-                    if any(word in item_lower for word in query_lower.split()):
+                    if any(word in item_lower for word in query_lower):
                         matched_memories.append(f"[{category.upper()}] {item}")
 
             elif isinstance(details, dict):
                 for key, val in details.items():
                     val_str = str(val).lower()
-                    if key.lower() in query_lower or any(word in val_str for word in query_lower.split()):
+                    if key.lower() in query_lower or any(word in val_str for word in query_lower):
                         matched_memories.append(f"[{key.upper()}] {val}")
 
         if not matched_memories:
-            return "General everyday context in Astoria / Ardent Logistics."
+            return "General everyday context in Astoria / New York life."
         return "\n".join(matched_memories)
 
-    def build_payload(self, user_input: str) -> dict:
-        """Prepares the exact prompt payload for an LLM/API call."""
-        relevant_context = self.retrieve_context(user_input)
-
-        payload = {
-            "system_instruction": self.system_prompt,
-            "retrieved_memories": relevant_context,
-            "user_input": user_input,
-        }
-        return payload
+    def build_user_message(self, user_input: str) -> str:
+        context = self.retrieve_context(user_input)
+        return (
+            f"Use this persona context when answering:\n\n"
+            f"{context}\n\n"
+            f"User question: {user_input}"
+        )
 
     def respond(self, user_input: str) -> str:
-        """
-        Simulates the cognitive execution loop.
-        Replace this method with an actual LLM API call when integrating
-        with OpenAI, Azure, Anthropic, etc.
-        """
-        payload = self.build_payload(user_input)
-        context = payload["retrieved_memories"]
+        """Calls Claude and returns the model's natural-language response."""
+        if self.client is None:
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY is not set. Export it in your shell before running the agent: "
+                "export ANTHROPIC_API_KEY='your_key_here'"
+            )
 
-        if not context:
-            context = "General everyday context in Astoria / Ardent Logistics."
+        prompt = self.build_user_message(user_input)
 
-        return (
-            f"Yeah, I get that. Here’s my take: \n"
-            f"{context}\n\n"
-            f"Your question: {payload['user_input']}"
+        response = self.client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=800,
+            system=self.system_prompt,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
         )
+
+        return response.content[0].text
 
     def chat(self, user_input: str) -> str:
         """Convenience method for conversational use."""
@@ -150,8 +158,12 @@ def run_console() -> None:
         if not user_input:
             continue
 
-        response = agent.chat(user_input)
-        print("\n" + response)
+        try:
+            response = agent.chat(user_input)
+            print("\nJames: " + response)
+        except RuntimeError as exc:
+            print(f"\nSetup required: {exc}")
+            break
         print("-" * 80)
 
 
