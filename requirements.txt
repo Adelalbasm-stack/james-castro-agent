@@ -1,0 +1,40 @@
+# James T. Castro Agent
+
+This repository contains a local persona-based AI agent for James T. Castro, using Ollama so it runs without an API key.
+
+## What this project includes
+- A memory archive with personal background, relationships, habits, and routines
+- A system prompt that frames the agent as James T. Castro
+- A Python chat loop that talks to a local Ollama model
+- No API key required
+
+## Install Ollama
+
+1. Install Ollama from: https://ollama.com/download
+2. Start the service
+3. Pull a model, for example:
+
+```bash
+ollama pull llama3.2
+```
+
+If you want a different model, set it in your environment:
+
+```bash
+export OLLAMA_MODEL=llama3.2
+```
+
+## Run it
+
+```bash
+python main.py
+```
+
+## Example interactions
+- "Where do you work?"
+- "Tell me about your friend Liam."
+- "What are your favorite foods?"
+- "Who are the people in your life?"
+
+## Notes
+This version uses a local installed model and keeps the persona consistent through a system prompt plus retrieved memory context.
