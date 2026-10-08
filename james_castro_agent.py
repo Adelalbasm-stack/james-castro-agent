@@ -117,11 +117,15 @@ class JamesCastroAgent:
         with OpenAI, Azure, Anthropic, etc.
         """
         payload = self.build_payload(user_input)
+        context = payload["retrieved_memories"]
+
+        if not context:
+            context = "General everyday context in Astoria / Ardent Logistics."
 
         return (
-            f"[Agent Executing as {self.identity}]\n"
-            f"Context Loaded:\n{payload['retrieved_memories']}\n"
-            f"User Input:\n{payload['user_input']}\n"
+            f"Yeah, I get that. Here’s my take: \n"
+            f"{context}\n\n"
+            f"Your question: {payload['user_input']}"
         )
 
     def chat(self, user_input: str) -> str:
@@ -153,4 +157,3 @@ def run_console() -> None:
 
 if __name__ == "__main__":
     run_console()
-"""
